@@ -1,0 +1,21 @@
+services:
+  mariadb_auth:
+    image: mariadb
+    environment:
+      MARIADB_RANDOM_ROOT_PASSWORD: 1
+      MARIADB_USER: gouser
+      MARIADB_PASSWORD: password
+      MARIADB_DATABASE: go_forum
+    ports:
+      - '3307:3306'
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      PMA_HOST: mariadb_auth
+      PMA_USER: gouser
+      PMA_PASSWORD: password
+    ports:
+      - '8080:80'
+    depends_on:
+      - mariadb_auth

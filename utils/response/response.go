@@ -81,6 +81,12 @@ const (
 	ErrDisableTOTP       = "Failed to disable TOTP"
 	ErrAuthTokenRequired = "Authorization token required"
 	ErrInvalidAuthToken  = "Invalid authorization token"
+	ErrCategoryNotFound  = "Category not found"
+	ErrTalkNotFound      = "Talk not found"
+	ErrMessageNotFound   = "Message not found"
+	ErrAlreadyLinked     = "Already linked"
+	ErrNotLinked         = "Not linked"
+	ErrForbidden         = "Forbidden"
 )
 
 const (
@@ -88,6 +94,10 @@ const (
 	SuccessDisableTOTP  = "TOTP disabled successfully"
 	SuccessGenerateTOTP = "TOTP key generated successfully"
 	SuccessLogin        = "Login successful"
+	SuccessRegister     = "Register successful"
+	SuccessDeleted      = "Deleted successfully"
+	SuccessLinked       = "Linked successfully"
+	SuccessUnlinked     = "Unlinked successfully"
 )
 
 type Response struct {

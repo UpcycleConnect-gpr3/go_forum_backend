@@ -14,6 +14,13 @@ build:
 migrate:
 	@go run $(MAIN_FILE) migrate
 
+generate-keys:
+	@echo "Generate Private Key :"
+	@openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
+	@echo "Generate Public Key :"
+	@openssl pkey -in private_key.pem -pubout -out public_key.pem
+	@echo "Keys Generate Successfully !!!"
+
 clean:
 	@echo "Nettoyage des fichiers générés..."
 	@rm -rf $(BUILD_DIR)

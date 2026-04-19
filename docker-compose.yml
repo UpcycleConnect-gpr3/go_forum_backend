@@ -1,21 +1,65 @@
 services:
-  mariadb_auth:
-    image: mariadb
+  app_forum:
+    build:
+      context: .
+      target: dev
+    container_name: app_forum
+    volumes:
+      - .env:/app/.env
+      - ./private_key.pem:/app/private_key.pem
+      - ./public_key.pem:/app/public_key.pem
+    depends_on:
+      mariadb_forum:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - default
+      - traefik_network
+      - database
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app_forum.rule=Host(`forum.localhost`)"
+      - "traefik.http.services.app_forum.loadbalancer.server.port=8082"
+
+  mariadb_forum:
+    image: mariadb:11
+    container_name: mariadb_forum
     environment:
       MARIADB_RANDOM_ROOT_PASSWORD: 1
       MARIADB_USER: gouser
       MARIADB_PASSWORD: password
       MARIADB_DATABASE: go_forum
-    ports:
-      - '3307:3306'
+    volumes:
+      - mariadb_forum_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - database
 
-  phpmyadmin:
+  phpmyadmin_forum:
     image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin_forum
     environment:
-      PMA_HOST: mariadb_auth
+      PMA_HOST: mariadb_forum
       PMA_USER: gouser
       PMA_PASSWORD: password
-    ports:
-      - '8080:80'
     depends_on:
-      - mariadb_auth
+      - mariadb_forum
+    networks:
+      - default
+      - traefik_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pma_forum.rule=Host(`pma-forum.localhost`)"
+      - "traefik.http.services.pma_forum.loadbalancer.server.port=80"
+
+volumes:
+  mariadb_forum_data:
+
+networks:
+  traefik_network:
+    external: true
+  database:

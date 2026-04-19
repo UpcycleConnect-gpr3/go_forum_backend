@@ -81,6 +81,11 @@ const (
 	ErrDisableTOTP       = "Failed to disable TOTP"
 	ErrAuthTokenRequired = "Authorization token required"
 	ErrInvalidAuthToken  = "Invalid authorization token"
+	ErrMessageNotFound   = "Message not found"
+	ErrCategoryNotFound  = "Category not found"
+	ErrTalkNotFound      = "Talk not found"
+	ErrEventNotFound     = "Event not found"
+	ErrProjectNotFound   = "Project not found"
 )
 
 const (

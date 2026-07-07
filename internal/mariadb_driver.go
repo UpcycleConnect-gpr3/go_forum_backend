@@ -16,7 +16,7 @@ func NewDatabase(user string, password string, host string, port string, dbname 
 		log.Fatal(errorToConvert)
 	}
 
-	var sqlInfo = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", user, password, host, intPort, dbname)
+	var sqlInfo = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true", user, password, host, intPort, dbname)
 
 	conn, err := sql.Open("mysql", sqlInfo)
 

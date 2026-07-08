@@ -1,0 +1,62 @@
+services:
+  app_forum:
+    container_name: app_forum
+    build:
+      context: .
+      target: dev
+    volumes:
+      - .env:/app/.env
+      - ./private_key.pem:/app/private_key.pem
+      - ./public_key.pem:/app/public_key.pem
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    restart: unless-stopped
+    networks:
+      - app_forum_mariadb_forum_network
+    depends_on:
+      mariadb_forum:
+        condition: service_healthy
+
+  mariadb_forum:
+    container_name: mariadb_forum
+    image: mariadb:11
+    environment:
+      MARIADB_RANDOM_ROOT_PASSWORD: 1
+      MARIADB_USER: "${DATABASE_USERNAME}"
+      MARIADB_PASSWORD: "${DATABASE_PASSWORD}"
+      MARIADB_DATABASE: "${DATABASE_NAME}"
+    ports:
+      - "${DATABASE_PORT}:3306"
+    volumes:
+      - mariadb_forum_data:/var/lib/mysql
+    networks:
+      - mariadb_forum_phpmyadmin_forum_network
+      - app_forum_mariadb_forum_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 1s
+      timeout: 3s
+      retries: 15
+
+  phpmyadmin_forum:
+    container_name: phpmyadmin_forum
+    image: phpmyadmin/phpmyadmin
+    environment:
+      PMA_HOST: mariadb_forum
+      PMA_USER: "${DATABASE_USERNAME}"
+      PMA_PASSWORD: "${DATABASE_PASSWORD}"
+    depends_on:
+      - mariadb_forum
+    ports:
+      - "8083:80"
+    networks:
+      - mariadb_forum_phpmyadmin_forum_network
+    restart: unless-stopped
+
+volumes:
+  mariadb_forum_data:
+
+networks:
+  mariadb_forum_phpmyadmin_forum_network:
+  app_forum_mariadb_forum_network:

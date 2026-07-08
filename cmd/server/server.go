@@ -105,6 +105,8 @@ func Start() {
 	http.HandleFunc("POST /events/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(event_handlers.CreateEventHandler))))
 	http.HandleFunc("PUT /events/{id}/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(event_handlers.UpdateEventHandler))))
 	http.HandleFunc("DELETE /events/{id}/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(event_handlers.DeleteEventHandler))))
+	http.HandleFunc("POST /events/{id}/validate/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(event_handlers.ValidateEventHandler))))
+	http.HandleFunc("POST /events/{id}/reject/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(event_handlers.RejectEventHandler))))
 	http.HandleFunc("GET /events/{id}/users/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(event_handlers.GetEventUsersHandler))))
 	http.HandleFunc("POST /events/{id}/users/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(event_handlers.LinkEventUserHandler))))
 	http.HandleFunc("DELETE /events/{id}/users/{user_id}/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(event_handlers.UnlinkEventUserHandler))))

@@ -16,6 +16,7 @@ type Event struct {
 	Description sql.NullString `json:"description"`
 	StartAt     time.Time      `db:"start_at" json:"start_at"`
 	EndAt       time.Time      `db:"end_at" json:"end_at"`
+	Status      string         `json:"status"`
 	CreatedAt   time.Time      `db:"created_at" json:"created_at"`
 	UpdatedAt   time.Time      `db:"updated_at" json:"updated_at"`
 }
@@ -46,7 +47,7 @@ func GetAllEvents(page, limit int) []Event {
 	offset := (page - 1) * limit
 
 	rows, err := database.Forum.Query(
-		"SELECT id, title, description, start_at, end_at, created_at, updated_at FROM "+TABLE+" LIMIT ? OFFSET ?",
+		"SELECT id, title, description, start_at, end_at, status, created_at, updated_at FROM "+TABLE+" LIMIT ? OFFSET ?",
 		limit, offset,
 	)
 	if err != nil {
@@ -58,7 +59,7 @@ func GetAllEvents(page, limit int) []Event {
 	events := []Event{}
 	for rows.Next() {
 		var e Event
-		if err := rows.Scan(&e.Id, &e.Title, &e.Description, &e.StartAt, &e.EndAt, &e.CreatedAt, &e.UpdatedAt); err != nil {
+		if err := rows.Scan(&e.Id, &e.Title, &e.Description, &e.StartAt, &e.EndAt, &e.Status, &e.CreatedAt, &e.UpdatedAt); err != nil {
 			log.Database(action, err)
 			continue
 		}
@@ -72,11 +73,11 @@ func GetEventByID(id int) *Event {
 	action := fmt.Sprintf("SELECT "+TABLE+" WHERE id : %d", id)
 
 	row := database.Forum.QueryRow(
-		"SELECT id, title, description, start_at, end_at, created_at, updated_at FROM "+TABLE+" WHERE id = ?",
+		"SELECT id, title, description, start_at, end_at, status, created_at, updated_at FROM "+TABLE+" WHERE id = ?",
 		id,
 	)
 
-	err := row.Scan(&event.Id, &event.Title, &event.Description, &event.StartAt, &event.EndAt, &event.CreatedAt, &event.UpdatedAt)
+	err := row.Scan(&event.Id, &event.Title, &event.Description, &event.StartAt, &event.EndAt, &event.Status, &event.CreatedAt, &event.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil
@@ -86,6 +87,18 @@ func GetEventByID(id int) *Event {
 	}
 
 	return &event
+}
+
+// SetStatus met a jour le statut de validation d'un evenement.
+func SetStatus(id int, status string) error {
+	_, err := database.Forum.Exec(
+		"UPDATE "+TABLE+" SET status = ?, updated_at = NOW() WHERE id = ?",
+		status, id,
+	)
+	if err != nil {
+		log.Database("SET EVENT STATUS", err)
+	}
+	return err
 }
 
 func CreateEvent(dto CreateEventDTO) *Event {

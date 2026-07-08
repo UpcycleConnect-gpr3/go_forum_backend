@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS USER_EVENT (
+    user_id CHAR(36) NOT NULL,
+    event_id INT NOT NULL,
+    PRIMARY KEY (user_id, event_id),
+    FOREIGN KEY (event_id) REFERENCES EVENTS(id) ON DELETE CASCADE
+)

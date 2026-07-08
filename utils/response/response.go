@@ -85,6 +85,7 @@ const (
 	ErrCategoryNotFound  = "Category not found"
 	ErrTalkNotFound      = "Talk not found"
 	ErrEventNotFound     = "Event not found"
+	ErrForbidden         = "Forbidden"
 	ErrProjectNotFound   = "Project not found"
 )
 

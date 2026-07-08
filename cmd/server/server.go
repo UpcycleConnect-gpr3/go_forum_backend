@@ -59,6 +59,7 @@ func Start() {
 	// ── Routes 2-3: Auth ──────────────────────────────────────────────────────
 	http.HandleFunc("POST /auth/login/{$}", limiterLow.RateLimit(containerApp(auth_handlers.LoginHandler)))
 	http.HandleFunc("POST /auth/register/{$}", limiterLow.RateLimit(containerApp(auth_handlers.RegisterHandler)))
+	http.HandleFunc("POST /auth/sso-login/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(auth_handlers.SSOLoginHandler))))
 
 	// ── Routes 4-8: Users ─────────────────────────────────────────────────────
 	http.HandleFunc("GET /users/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(user_handlers.GetUsersHandler))))
@@ -116,8 +117,28 @@ func Start() {
 	http.HandleFunc("DELETE /projects/{id}/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(project_handlers.DeleteProjectHandler))))
 
 	logger.Info().Msg("Listening at http://localhost:" + os.Getenv("APP_PORT"))
-	err := http.ListenAndServe(":"+os.Getenv("APP_PORT"), nil)
+	err := http.ListenAndServe(":"+os.Getenv("APP_PORT"), corsMiddleware(http.DefaultServeMux))
 	if err != nil {
 		return
 	}
+}
+
+// corsMiddleware enables cross-origin requests from the local dev frontends
+// (Vite on a different port). Reflects the request Origin and answers the
+// preflight OPTIONS so browser calls are not blocked.
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if origin := r.Header.Get("Origin"); origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Vary", "Origin")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Container-Name")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

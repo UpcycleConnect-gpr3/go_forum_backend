@@ -5,7 +5,7 @@ services:
       target: dev
     container_name: app_forum
     volumes:
-      - .env:/app/.env
+      - ./.env:/app/.env
       - ./private_key.pem:/app/private_key.pem
       - ./public_key.pem:/app/public_key.pem
     depends_on:
@@ -15,7 +15,6 @@ services:
     networks:
       - default
       - traefik_network
-      - database
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app_forum.rule=Host(`forum.localhost`)"
@@ -29,15 +28,15 @@ services:
       MARIADB_USER: gouser
       MARIADB_PASSWORD: password
       MARIADB_DATABASE: go_forum
+    ports:
+      - '3307:3306'
     volumes:
       - mariadb_forum_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - database
 
   phpmyadmin_forum:
     image: phpmyadmin/phpmyadmin
@@ -62,4 +61,3 @@ volumes:
 networks:
   traefik_network:
     external: true
-  database:

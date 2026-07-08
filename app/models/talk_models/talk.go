@@ -11,23 +11,32 @@ import (
 const TABLE = "TALKS"
 
 type Talk struct {
-	Id         int       `json:"id"`
-	Title      string    `json:"title"`
-	Content    string    `json:"content"`
-	CategoryID int       `db:"category_id" json:"category_id"`
-	CreatedAt  time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt  time.Time `db:"updated_at" json:"updated_at"`
+	Id          int       `json:"id"`
+	Title       string    `json:"title"`
+	Content     string    `json:"content"`
+	CategoryID  int       `db:"category_id" json:"category_id"`
+	Type        string    `json:"type"`
+	Status      string    `json:"status"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 }
 
 type CreateTalkDTO struct {
-	Title      string
-	Content    string
-	CategoryID int
+	Title       string
+	Content     string
+	CategoryID  int
+	Type        string
+	Status      string
+	Description string
 }
 
 type UpdateTalkDTO struct {
-	Title   string
-	Content string
+	Title       string
+	Content     string
+	Type        string
+	Status      string
+	Description string
 }
 
 type MessageSummary struct {
@@ -48,7 +57,7 @@ func GetAllTalks(page, limit int) []Talk {
 	offset := (page - 1) * limit
 
 	rows, err := database.Forum.Query(
-		"SELECT id, title, content, category_id, created_at, updated_at FROM "+TABLE+" LIMIT ? OFFSET ?",
+		"SELECT id, title, content, category_id, type, status, description, created_at, updated_at FROM "+TABLE+" LIMIT ? OFFSET ?",
 		limit, offset,
 	)
 	if err != nil {
@@ -60,7 +69,7 @@ func GetAllTalks(page, limit int) []Talk {
 	talks := []Talk{}
 	for rows.Next() {
 		var t Talk
-		if err := rows.Scan(&t.Id, &t.Title, &t.Content, &t.CategoryID, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.Id, &t.Title, &t.Content, &t.CategoryID, &t.Type, &t.Status, &t.Description, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			log.Database(action, err)
 			continue
 		}
@@ -74,11 +83,11 @@ func GetTalkByID(id int) *Talk {
 	action := fmt.Sprintf("SELECT "+TABLE+" WHERE id : %d", id)
 
 	row := database.Forum.QueryRow(
-		"SELECT id, title, content, category_id, created_at, updated_at FROM "+TABLE+" WHERE id = ?",
+		"SELECT id, title, content, category_id, type, status, description, created_at, updated_at FROM "+TABLE+" WHERE id = ?",
 		id,
 	)
 
-	err := row.Scan(&talk.Id, &talk.Title, &talk.Content, &talk.CategoryID, &talk.CreatedAt, &talk.UpdatedAt)
+	err := row.Scan(&talk.Id, &talk.Title, &talk.Content, &talk.CategoryID, &talk.Type, &talk.Status, &talk.Description, &talk.CreatedAt, &talk.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil
@@ -94,8 +103,8 @@ func CreateTalk(dto CreateTalkDTO) *Talk {
 	action := "INSERT INTO " + TABLE
 
 	result, err := database.Forum.Exec(
-		"INSERT INTO "+TABLE+" (title, content, category_id) VALUES (?, ?, ?)",
-		dto.Title, dto.Content, dto.CategoryID,
+		"INSERT INTO "+TABLE+" (title, content, category_id, type, status, description) VALUES (?, ?, ?, ?, ?, ?)",
+		dto.Title, dto.Content, dto.CategoryID, dto.Type, dto.Status, dto.Description,
 	)
 	if err != nil {
 		log.Database(action, err)
@@ -115,8 +124,8 @@ func UpdateTalk(id int, dto UpdateTalkDTO) *Talk {
 	action := fmt.Sprintf("UPDATE "+TABLE+" WHERE id : %d", id)
 
 	_, err := database.Forum.Exec(
-		"UPDATE "+TABLE+" SET title = ?, content = ? WHERE id = ?",
-		dto.Title, dto.Content, id,
+		"UPDATE "+TABLE+" SET title = ?, content = ?, type = ?, status = ?, description = ? WHERE id = ?",
+		dto.Title, dto.Content, dto.Type, dto.Status, dto.Description, id,
 	)
 	if err != nil {
 		log.Database(action, err)

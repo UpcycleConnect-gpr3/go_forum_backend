@@ -30,24 +30,6 @@ func GetTalksHandler(w http.ResponseWriter, r *http.Request) {
 	response.NewSuccessData(w, talks, "")
 }
 
-func CreateTalkHandler(w http.ResponseWriter, r *http.Request) {
-	log.Api(r)
-
-	var dto talk_actions.TalkDTO
-	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
-		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
-		return
-	}
-
-	validationErrors, talk := talk_actions.CreateTalk(dto)
-	if len(validationErrors) > 0 {
-		response.NewValidationError(w, response.ErrInvalidBody, validationErrors)
-		return
-	}
-
-	response.NewSuccessData(w, talk, "")
-}
-
 func GetTalkHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
@@ -60,6 +42,24 @@ func GetTalkHandler(w http.ResponseWriter, r *http.Request) {
 	talk := talk_models.GetTalkByID(id)
 	if talk == nil {
 		response.NewErrorMessage(w, response.ErrTalkNotFound, http.StatusNotFound)
+		return
+	}
+
+	response.NewSuccessData(w, talk, "")
+}
+
+func CreateTalkHandler(w http.ResponseWriter, r *http.Request) {
+	log.Api(r)
+
+	var dto talk_actions.CreateTalkDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
+		return
+	}
+
+	validationErrors, talk := talk_actions.CreateTalk(dto)
+	if len(validationErrors) > 0 {
+		response.NewValidationError(w, response.ErrInvalidBody, validationErrors)
 		return
 	}
 
@@ -127,59 +127,11 @@ func GetTalkMessagesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page, limit := parsePage(r)
-	messages := talk_models.GetTalkMessages(id, page, limit)
+	messages := talk_models.GetTalkMessages(id)
 	response.NewSuccessData(w, messages, "")
 }
 
-func CreateTalkMessageHandler(w http.ResponseWriter, r *http.Request) {
-	log.Api(r)
-
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil {
-		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
-		return
-	}
-
-	if talk_models.GetTalkByID(id) == nil {
-		response.NewErrorMessage(w, response.ErrTalkNotFound, http.StatusNotFound)
-		return
-	}
-
-	var dto talk_actions.MessageDTO
-	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
-		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
-		return
-	}
-
-	validationErrors, msg := talk_actions.CreateTalkMessage(id, dto)
-	if len(validationErrors) > 0 {
-		response.NewValidationError(w, response.ErrInvalidBody, validationErrors)
-		return
-	}
-
-	response.NewSuccessData(w, msg, "")
-}
-
-func GetTalkCategoriesHandler(w http.ResponseWriter, r *http.Request) {
-	log.Api(r)
-
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil {
-		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
-		return
-	}
-
-	if talk_models.GetTalkByID(id) == nil {
-		response.NewErrorMessage(w, response.ErrTalkNotFound, http.StatusNotFound)
-		return
-	}
-
-	categories := talk_models.GetTalkCategories(id)
-	response.NewSuccessData(w, categories, "")
-}
-
-func LinkTalkCategoryHandler(w http.ResponseWriter, r *http.Request) {
+func LinkTalkMessageHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
 	id, err := strconv.Atoi(r.PathValue("id"))
@@ -194,18 +146,18 @@ func LinkTalkCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		CategoryID int `json:"category_id"`
+		MessageID int `json:"message_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
 		return
 	}
 
-	talk_models.LinkCategory(id, body.CategoryID)
-	response.NewSuccessMessage(w, "Category linked")
+	talk_models.LinkMessage(id, body.MessageID)
+	response.NewSuccessMessage(w, "Message assigned")
 }
 
-func UnlinkTalkCategoryHandler(w http.ResponseWriter, r *http.Request) {
+func UnlinkTalkMessageHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
 	id, err := strconv.Atoi(r.PathValue("id"))
@@ -214,14 +166,14 @@ func UnlinkTalkCategoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	categoryID, err := strconv.Atoi(r.PathValue("category_id"))
+	messageID, err := strconv.Atoi(r.PathValue("message_id"))
 	if err != nil {
-		response.NewErrorMessage(w, "Invalid category_id", http.StatusBadRequest)
+		response.NewErrorMessage(w, "Invalid message_id", http.StatusBadRequest)
 		return
 	}
 
-	talk_models.UnlinkCategory(id, categoryID)
-	response.NewSuccessMessage(w, "Category unlinked")
+	talk_models.UnlinkMessage(id, messageID)
+	response.NewSuccessMessage(w, "Message removed")
 }
 
 func GetTalkUsersHandler(w http.ResponseWriter, r *http.Request) {
@@ -280,130 +232,4 @@ func UnlinkTalkUserHandler(w http.ResponseWriter, r *http.Request) {
 	userID := r.PathValue("user_id")
 	talk_models.UnlinkUser(id, userID)
 	response.NewSuccessMessage(w, "User removed")
-}
-
-func GetTalkEventsHandler(w http.ResponseWriter, r *http.Request) {
-	log.Api(r)
-
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil {
-		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
-		return
-	}
-
-	if talk_models.GetTalkByID(id) == nil {
-		response.NewErrorMessage(w, response.ErrTalkNotFound, http.StatusNotFound)
-		return
-	}
-
-	events := talk_models.GetTalkEvents(id)
-	response.NewSuccessData(w, events, "")
-}
-
-func LinkTalkEventHandler(w http.ResponseWriter, r *http.Request) {
-	log.Api(r)
-
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil {
-		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
-		return
-	}
-
-	if talk_models.GetTalkByID(id) == nil {
-		response.NewErrorMessage(w, response.ErrTalkNotFound, http.StatusNotFound)
-		return
-	}
-
-	var body struct {
-		EventID int `json:"event_id"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
-		return
-	}
-
-	talk_models.LinkEvent(id, body.EventID)
-	response.NewSuccessMessage(w, "Event linked")
-}
-
-func UnlinkTalkEventHandler(w http.ResponseWriter, r *http.Request) {
-	log.Api(r)
-
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil {
-		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
-		return
-	}
-
-	eventID, err := strconv.Atoi(r.PathValue("event_id"))
-	if err != nil {
-		response.NewErrorMessage(w, "Invalid event_id", http.StatusBadRequest)
-		return
-	}
-
-	talk_models.UnlinkEvent(id, eventID)
-	response.NewSuccessMessage(w, "Event unlinked")
-}
-
-func GetTalkProjectsHandler(w http.ResponseWriter, r *http.Request) {
-	log.Api(r)
-
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil {
-		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
-		return
-	}
-
-	if talk_models.GetTalkByID(id) == nil {
-		response.NewErrorMessage(w, response.ErrTalkNotFound, http.StatusNotFound)
-		return
-	}
-
-	projects := talk_models.GetTalkProjects(id)
-	response.NewSuccessData(w, projects, "")
-}
-
-func LinkTalkProjectHandler(w http.ResponseWriter, r *http.Request) {
-	log.Api(r)
-
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil {
-		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
-		return
-	}
-
-	if talk_models.GetTalkByID(id) == nil {
-		response.NewErrorMessage(w, response.ErrTalkNotFound, http.StatusNotFound)
-		return
-	}
-
-	var body struct {
-		ProjectID int `json:"project_id"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
-		return
-	}
-
-	talk_models.LinkProject(id, body.ProjectID)
-	response.NewSuccessMessage(w, "Project linked")
-}
-
-func UnlinkTalkProjectHandler(w http.ResponseWriter, r *http.Request) {
-	log.Api(r)
-
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil {
-		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
-		return
-	}
-
-	projectID, err := strconv.Atoi(r.PathValue("project_id"))
-	if err != nil {
-		response.NewErrorMessage(w, "Invalid project_id", http.StatusBadRequest)
-		return
-	}
-
-	talk_models.UnlinkProject(id, projectID)
-	response.NewSuccessMessage(w, "Project unlinked")
 }

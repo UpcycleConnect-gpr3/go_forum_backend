@@ -10,29 +10,24 @@ import (
 	"strconv"
 )
 
+func parsePage(r *http.Request) (int, int) {
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil || limit < 1 {
+		limit = 20
+	}
+	return page, limit
+}
+
 func GetCategoriesHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
-	categories := category_models.GetAllCategories()
+	page, limit := parsePage(r)
+	categories := category_models.GetAllCategories(page, limit)
 	response.NewSuccessData(w, categories, "")
-}
-
-func CreateCategoryHandler(w http.ResponseWriter, r *http.Request) {
-	log.Api(r)
-
-	var dto category_actions.CategoryDTO
-	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
-		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
-		return
-	}
-
-	validationErrors, category := category_actions.CreateCategory(dto)
-	if len(validationErrors) > 0 {
-		response.NewValidationError(w, response.ErrInvalidBody, validationErrors)
-		return
-	}
-
-	response.NewSuccessData(w, category, "")
 }
 
 func GetCategoryHandler(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +48,24 @@ func GetCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	response.NewSuccessData(w, category, "")
 }
 
+func CreateCategoryHandler(w http.ResponseWriter, r *http.Request) {
+	log.Api(r)
+
+	var dto category_actions.CreateCategoryDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
+		return
+	}
+
+	validationErrors, category := category_actions.CreateCategory(dto)
+	if len(validationErrors) > 0 {
+		response.NewValidationError(w, response.ErrInvalidBody, validationErrors)
+		return
+	}
+
+	response.NewSuccessData(w, category, "")
+}
+
 func UpdateCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
@@ -67,7 +80,7 @@ func UpdateCategoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var dto category_actions.CategoryDTO
+	var dto category_actions.UpdateCategoryDTO
 	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
 		return

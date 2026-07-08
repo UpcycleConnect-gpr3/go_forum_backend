@@ -18,22 +18,30 @@ type Category struct {
 	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 }
 
-type CategoryDTO struct {
+type CreateCategoryDTO struct {
+	Name        string
+	Description string
+}
+
+type UpdateCategoryDTO struct {
 	Name        string
 	Description string
 }
 
 type TalkSummary struct {
-	Id     int    `json:"id"`
-	Title  string `json:"title"`
-	Type   string `json:"type"`
-	Status string `json:"status"`
+	Id        int       `json:"id"`
+	Title     string    `json:"title"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
-func GetAllCategories() []Category {
-	action := "SELECT " + TABLE
+func GetAllCategories(page, limit int) []Category {
+	action := "SELECT " + TABLE + " (paginated)"
+	offset := (page - 1) * limit
 
-	rows, err := database.Forum.Query("SELECT id, name, description, created_at, updated_at FROM " + TABLE)
+	rows, err := database.Forum.Query(
+		"SELECT id, name, description, created_at, updated_at FROM "+TABLE+" LIMIT ? OFFSET ?",
+		limit, offset,
+	)
 	if err != nil {
 		log.Database(action, err)
 		return []Category{}
@@ -56,7 +64,10 @@ func GetCategoryByID(id int) *Category {
 	category := Category{}
 	action := fmt.Sprintf("SELECT "+TABLE+" WHERE id : %d", id)
 
-	row := database.Forum.QueryRow("SELECT id, name, description, created_at, updated_at FROM "+TABLE+" WHERE id = ?", id)
+	row := database.Forum.QueryRow(
+		"SELECT id, name, description, created_at, updated_at FROM "+TABLE+" WHERE id = ?",
+		id,
+	)
 
 	err := row.Scan(&category.Id, &category.Name, &category.Description, &category.CreatedAt, &category.UpdatedAt)
 	if err != nil {
@@ -70,8 +81,8 @@ func GetCategoryByID(id int) *Category {
 	return &category
 }
 
-func CreateCategory(dto CategoryDTO) *Category {
-	action := fmt.Sprintf("INSERT INTO "+TABLE+" : %s", dto.Name)
+func CreateCategory(dto CreateCategoryDTO) *Category {
+	action := "INSERT INTO " + TABLE
 
 	result, err := database.Forum.Exec(
 		"INSERT INTO "+TABLE+" (name, description) VALUES (?, ?)",
@@ -91,7 +102,7 @@ func CreateCategory(dto CategoryDTO) *Category {
 	return GetCategoryByID(int(id))
 }
 
-func UpdateCategory(id int, dto CategoryDTO) *Category {
+func UpdateCategory(id int, dto UpdateCategoryDTO) *Category {
 	action := fmt.Sprintf("UPDATE "+TABLE+" WHERE id : %d", id)
 
 	_, err := database.Forum.Exec(
@@ -116,10 +127,10 @@ func DeleteCategory(id int) {
 }
 
 func GetCategoryTalks(categoryID int) []TalkSummary {
-	action := fmt.Sprintf("SELECT TALKS JOIN CATEGORY_TALK WHERE category_id : %d", categoryID)
+	action := fmt.Sprintf("SELECT TALKS WHERE category_id : %d", categoryID)
 
 	rows, err := database.Forum.Query(
-		"SELECT t.id, t.title, t.type, t.status FROM TALKS t JOIN CATEGORY_TALK ct ON t.id = ct.talk_id WHERE ct.category_id = ?",
+		"SELECT id, title, created_at FROM TALKS WHERE category_id = ?",
 		categoryID,
 	)
 	if err != nil {
@@ -131,7 +142,7 @@ func GetCategoryTalks(categoryID int) []TalkSummary {
 	talks := []TalkSummary{}
 	for rows.Next() {
 		var t TalkSummary
-		if err := rows.Scan(&t.Id, &t.Title, &t.Type, &t.Status); err != nil {
+		if err := rows.Scan(&t.Id, &t.Title, &t.CreatedAt); err != nil {
 			log.Database(action, err)
 			continue
 		}

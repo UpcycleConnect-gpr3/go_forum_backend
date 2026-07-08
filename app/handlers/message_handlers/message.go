@@ -10,6 +10,10 @@ import (
 	"strconv"
 )
 
+func parseID(r *http.Request) (int, error) {
+	return strconv.Atoi(r.PathValue("id"))
+}
+
 func parsePage(r *http.Request) (int, int) {
 	page, err := strconv.Atoi(r.URL.Query().Get("page"))
 	if err != nil || page < 1 {
@@ -30,28 +34,10 @@ func GetMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	response.NewSuccessData(w, messages, "")
 }
 
-func CreateMessageHandler(w http.ResponseWriter, r *http.Request) {
-	log.Api(r)
-
-	var dto message_actions.MessageDTO
-	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
-		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
-		return
-	}
-
-	validationErrors, message := message_actions.CreateMessage(dto)
-	if len(validationErrors) > 0 {
-		response.NewValidationError(w, response.ErrInvalidBody, validationErrors)
-		return
-	}
-
-	response.NewSuccessData(w, message, "")
-}
-
 func GetMessageHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
-	id, err := strconv.Atoi(r.PathValue("id"))
+	id, err := parseID(r)
 	if err != nil {
 		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
 		return
@@ -66,10 +52,28 @@ func GetMessageHandler(w http.ResponseWriter, r *http.Request) {
 	response.NewSuccessData(w, message, "")
 }
 
+func CreateMessageHandler(w http.ResponseWriter, r *http.Request) {
+	log.Api(r)
+
+	var dto message_actions.CreateMessageDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
+		return
+	}
+
+	validationErrors, message := message_actions.CreateMessage(dto)
+	if len(validationErrors) > 0 {
+		response.NewValidationError(w, response.ErrInvalidBody, validationErrors)
+		return
+	}
+
+	response.NewSuccessData(w, message, "")
+}
+
 func UpdateMessageHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
-	id, err := strconv.Atoi(r.PathValue("id"))
+	id, err := parseID(r)
 	if err != nil {
 		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
 		return
@@ -98,7 +102,7 @@ func UpdateMessageHandler(w http.ResponseWriter, r *http.Request) {
 func DeleteMessageHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
-	id, err := strconv.Atoi(r.PathValue("id"))
+	id, err := parseID(r)
 	if err != nil {
 		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
 		return
@@ -116,7 +120,7 @@ func DeleteMessageHandler(w http.ResponseWriter, r *http.Request) {
 func GetMessageUsersHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
-	id, err := strconv.Atoi(r.PathValue("id"))
+	id, err := parseID(r)
 	if err != nil {
 		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
 		return
@@ -134,7 +138,7 @@ func GetMessageUsersHandler(w http.ResponseWriter, r *http.Request) {
 func LinkMessageUserHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
-	id, err := strconv.Atoi(r.PathValue("id"))
+	id, err := parseID(r)
 	if err != nil {
 		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
 		return
@@ -154,19 +158,20 @@ func LinkMessageUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	message_models.LinkUser(id, body.UserID)
-	response.NewSuccessMessage(w, "User assigned")
+	response.NewSuccessMessage(w, "User linked")
 }
 
 func UnlinkMessageUserHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
-	id, err := strconv.Atoi(r.PathValue("id"))
+	id, err := parseID(r)
 	if err != nil {
 		response.NewErrorMessage(w, "Invalid id", http.StatusBadRequest)
 		return
 	}
 
 	userID := r.PathValue("user_id")
+
 	message_models.UnlinkUser(id, userID)
-	response.NewSuccessMessage(w, "User removed")
+	response.NewSuccessMessage(w, "User unlinked")
 }

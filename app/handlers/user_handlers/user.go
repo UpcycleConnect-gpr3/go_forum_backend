@@ -34,6 +34,7 @@ func GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
 	id := r.PathValue("id")
+
 	user := user_models.GetUserByID(id)
 	if user == nil {
 		response.NewErrorMessage(w, response.ErrUserNotFound, http.StatusNotFound)
@@ -47,12 +48,13 @@ func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
 	id := r.PathValue("id")
+
 	if user_models.GetUserByID(id) == nil {
 		response.NewErrorMessage(w, response.ErrUserNotFound, http.StatusNotFound)
 		return
 	}
 
-	var dto user_actions.UpdateUserDTO
+	var dto user_actions.UpdateUserActionDTO
 	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
 		return
@@ -71,6 +73,7 @@ func DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
 	id := r.PathValue("id")
+
 	if user_models.GetUserByID(id) == nil {
 		response.NewErrorMessage(w, response.ErrUserNotFound, http.StatusNotFound)
 		return
@@ -80,23 +83,11 @@ func DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
 	response.NewSuccessMessage(w, "User deleted")
 }
 
-func GetUserTalksHandler(w http.ResponseWriter, r *http.Request) {
-	log.Api(r)
-
-	id := r.PathValue("id")
-	if user_models.GetUserByID(id) == nil {
-		response.NewErrorMessage(w, response.ErrUserNotFound, http.StatusNotFound)
-		return
-	}
-
-	talks := user_models.GetUserTalks(id)
-	response.NewSuccessData(w, talks, "")
-}
-
 func GetUserMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
 	id := r.PathValue("id")
+
 	if user_models.GetUserByID(id) == nil {
 		response.NewErrorMessage(w, response.ErrUserNotFound, http.StatusNotFound)
 		return

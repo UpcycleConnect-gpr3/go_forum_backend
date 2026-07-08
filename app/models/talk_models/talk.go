@@ -13,6 +13,8 @@ const TABLE = "TALKS"
 type Talk struct {
 	Id          int       `json:"id"`
 	Title       string    `json:"title"`
+	Content     string    `json:"content"`
+	CategoryID  int       `db:"category_id" json:"category_id"`
 	Type        string    `json:"type"`
 	Status      string    `json:"status"`
 	Description string    `json:"description"`
@@ -22,28 +24,25 @@ type Talk struct {
 
 type CreateTalkDTO struct {
 	Title       string
+	Content     string
+	CategoryID  int
 	Type        string
 	Status      string
 	Description string
 }
 
 type UpdateTalkDTO struct {
-	Title  string
-	Status string
+	Title       string
+	Content     string
+	Type        string
+	Status      string
+	Description string
 }
 
 type MessageSummary struct {
-	Id        int            `json:"id"`
-	Content   string         `json:"content"`
-	FilePath  sql.NullString `json:"file_path"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-}
-
-type CategorySummary struct {
-	Id          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Id        int       `json:"id"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type UserSummary struct {
@@ -53,23 +52,12 @@ type UserSummary struct {
 	Lastname  string `json:"lastname"`
 }
 
-type EventSummary struct {
-	Id    int    `json:"id"`
-	Title string `json:"title"`
-	Date  string `json:"date"`
-}
-
-type ProjectSummary struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-}
-
 func GetAllTalks(page, limit int) []Talk {
 	action := "SELECT " + TABLE + " (paginated)"
 	offset := (page - 1) * limit
 
 	rows, err := database.Forum.Query(
-		"SELECT id, title, type, status, description, created_at, updated_at FROM "+TABLE+" LIMIT ? OFFSET ?",
+		"SELECT id, title, content, category_id, type, status, description, created_at, updated_at FROM "+TABLE+" LIMIT ? OFFSET ?",
 		limit, offset,
 	)
 	if err != nil {
@@ -81,7 +69,7 @@ func GetAllTalks(page, limit int) []Talk {
 	talks := []Talk{}
 	for rows.Next() {
 		var t Talk
-		if err := rows.Scan(&t.Id, &t.Title, &t.Type, &t.Status, &t.Description, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.Id, &t.Title, &t.Content, &t.CategoryID, &t.Type, &t.Status, &t.Description, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			log.Database(action, err)
 			continue
 		}
@@ -95,11 +83,11 @@ func GetTalkByID(id int) *Talk {
 	action := fmt.Sprintf("SELECT "+TABLE+" WHERE id : %d", id)
 
 	row := database.Forum.QueryRow(
-		"SELECT id, title, type, status, description, created_at, updated_at FROM "+TABLE+" WHERE id = ?",
+		"SELECT id, title, content, category_id, type, status, description, created_at, updated_at FROM "+TABLE+" WHERE id = ?",
 		id,
 	)
 
-	err := row.Scan(&talk.Id, &talk.Title, &talk.Type, &talk.Status, &talk.Description, &talk.CreatedAt, &talk.UpdatedAt)
+	err := row.Scan(&talk.Id, &talk.Title, &talk.Content, &talk.CategoryID, &talk.Type, &talk.Status, &talk.Description, &talk.CreatedAt, &talk.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil
@@ -115,8 +103,8 @@ func CreateTalk(dto CreateTalkDTO) *Talk {
 	action := "INSERT INTO " + TABLE
 
 	result, err := database.Forum.Exec(
-		"INSERT INTO "+TABLE+" (title, type, status, description) VALUES (?, ?, ?, ?)",
-		dto.Title, dto.Type, dto.Status, dto.Description,
+		"INSERT INTO "+TABLE+" (title, content, category_id, type, status, description) VALUES (?, ?, ?, ?, ?, ?)",
+		dto.Title, dto.Content, dto.CategoryID, dto.Type, dto.Status, dto.Description,
 	)
 	if err != nil {
 		log.Database(action, err)
@@ -136,8 +124,8 @@ func UpdateTalk(id int, dto UpdateTalkDTO) *Talk {
 	action := fmt.Sprintf("UPDATE "+TABLE+" WHERE id : %d", id)
 
 	_, err := database.Forum.Exec(
-		"UPDATE "+TABLE+" SET title = ?, status = ? WHERE id = ?",
-		dto.Title, dto.Status, id,
+		"UPDATE "+TABLE+" SET title = ?, content = ?, type = ?, status = ?, description = ? WHERE id = ?",
+		dto.Title, dto.Content, dto.Type, dto.Status, dto.Description, id,
 	)
 	if err != nil {
 		log.Database(action, err)
@@ -156,13 +144,12 @@ func DeleteTalk(id int) {
 	}
 }
 
-func GetTalkMessages(talkID, page, limit int) []MessageSummary {
-	action := fmt.Sprintf("SELECT MESSAGES JOIN MESSAGE_TALK WHERE talk_id : %d", talkID)
-	offset := (page - 1) * limit
+func GetTalkMessages(talkID int) []MessageSummary {
+	action := fmt.Sprintf("SELECT MESSAGES JOIN TALK_MESSAGE WHERE talk_id : %d", talkID)
 
 	rows, err := database.Forum.Query(
-		"SELECT m.id, m.content, m.file_path, m.created_at, m.updated_at FROM MESSAGES m JOIN MESSAGE_TALK mt ON m.id = mt.message_id WHERE mt.talk_id = ? LIMIT ? OFFSET ?",
-		talkID, limit, offset,
+		"SELECT m.id, m.content, m.created_at FROM MESSAGES m JOIN TALK_MESSAGE tm ON m.id = tm.message_id WHERE tm.talk_id = ?",
+		talkID,
 	)
 	if err != nil {
 		log.Database(action, err)
@@ -173,7 +160,7 @@ func GetTalkMessages(talkID, page, limit int) []MessageSummary {
 	messages := []MessageSummary{}
 	for rows.Next() {
 		var m MessageSummary
-		if err := rows.Scan(&m.Id, &m.Content, &m.FilePath, &m.CreatedAt, &m.UpdatedAt); err != nil {
+		if err := rows.Scan(&m.Id, &m.Content, &m.CreatedAt); err != nil {
 			log.Database(action, err)
 			continue
 		}
@@ -182,89 +169,24 @@ func GetTalkMessages(talkID, page, limit int) []MessageSummary {
 	return messages
 }
 
-func CreateTalkMessage(talkID int, content, filePath string) *MessageSummary {
-	action := fmt.Sprintf("INSERT MESSAGES + MESSAGE_TALK for talk_id : %d", talkID)
-
-	result, err := database.Forum.Exec(
-		"INSERT INTO MESSAGES (content, file_path) VALUES (?, ?)",
-		content, sql.NullString{String: filePath, Valid: filePath != ""},
-	)
-	if err != nil {
-		log.Database(action, err)
-		return nil
-	}
-
-	messageID, err := result.LastInsertId()
-	if err != nil {
-		log.Database(action, err)
-		return nil
-	}
-
-	_, err = database.Forum.Exec(
-		"INSERT IGNORE INTO MESSAGE_TALK (message_id, talk_id) VALUES (?, ?)",
-		messageID, talkID,
-	)
-	if err != nil {
-		log.Database(action, err)
-		return nil
-	}
-
-	msg := &MessageSummary{}
-	row := database.Forum.QueryRow(
-		"SELECT id, content, file_path, created_at, updated_at FROM MESSAGES WHERE id = ?",
-		messageID,
-	)
-	if err := row.Scan(&msg.Id, &msg.Content, &msg.FilePath, &msg.CreatedAt, &msg.UpdatedAt); err != nil {
-		log.Database(action, err)
-		return nil
-	}
-
-	return msg
-}
-
-func GetTalkCategories(talkID int) []CategorySummary {
-	action := fmt.Sprintf("SELECT CATEGORIES JOIN CATEGORY_TALK WHERE talk_id : %d", talkID)
-
-	rows, err := database.Forum.Query(
-		"SELECT c.id, c.name, c.description FROM CATEGORIES c JOIN CATEGORY_TALK ct ON c.id = ct.category_id WHERE ct.talk_id = ?",
-		talkID,
-	)
-	if err != nil {
-		log.Database(action, err)
-		return []CategorySummary{}
-	}
-	defer rows.Close()
-
-	categories := []CategorySummary{}
-	for rows.Next() {
-		var c CategorySummary
-		if err := rows.Scan(&c.Id, &c.Name, &c.Description); err != nil {
-			log.Database(action, err)
-			continue
-		}
-		categories = append(categories, c)
-	}
-	return categories
-}
-
-func LinkCategory(talkID, categoryID int) {
-	action := fmt.Sprintf("INSERT INTO CATEGORY_TALK talk_id:%d category_id:%d", talkID, categoryID)
+func LinkMessage(talkID, messageID int) {
+	action := fmt.Sprintf("INSERT INTO TALK_MESSAGE talk_id:%d message_id:%d", talkID, messageID)
 
 	_, err := database.Forum.Exec(
-		"INSERT IGNORE INTO CATEGORY_TALK (category_id, talk_id) VALUES (?, ?)",
-		categoryID, talkID,
+		"INSERT IGNORE INTO TALK_MESSAGE (talk_id, message_id) VALUES (?, ?)",
+		talkID, messageID,
 	)
 	if err != nil {
 		log.Database(action, err)
 	}
 }
 
-func UnlinkCategory(talkID, categoryID int) {
-	action := fmt.Sprintf("DELETE FROM CATEGORY_TALK talk_id:%d category_id:%d", talkID, categoryID)
+func UnlinkMessage(talkID, messageID int) {
+	action := fmt.Sprintf("DELETE FROM TALK_MESSAGE talk_id:%d message_id:%d", talkID, messageID)
 
 	_, err := database.Forum.Exec(
-		"DELETE FROM CATEGORY_TALK WHERE category_id = ? AND talk_id = ?",
-		categoryID, talkID,
+		"DELETE FROM TALK_MESSAGE WHERE talk_id = ? AND message_id = ?",
+		talkID, messageID,
 	)
 	if err != nil {
 		log.Database(action, err)
@@ -314,104 +236,6 @@ func UnlinkUser(talkID int, userID string) {
 	_, err := database.Forum.Exec(
 		"DELETE FROM USER_TALK WHERE user_id = ? AND talk_id = ?",
 		userID, talkID,
-	)
-	if err != nil {
-		log.Database(action, err)
-	}
-}
-
-func GetTalkEvents(talkID int) []EventSummary {
-	action := fmt.Sprintf("SELECT EVENTS JOIN TALK_EVENT WHERE talk_id : %d", talkID)
-
-	rows, err := database.Forum.Query(
-		"SELECT e.id, e.title, e.date FROM EVENTS e JOIN TALK_EVENT te ON e.id = te.event_id WHERE te.talk_id = ?",
-		talkID,
-	)
-	if err != nil {
-		log.Database(action, err)
-		return []EventSummary{}
-	}
-	defer rows.Close()
-
-	events := []EventSummary{}
-	for rows.Next() {
-		var e EventSummary
-		if err := rows.Scan(&e.Id, &e.Title, &e.Date); err != nil {
-			log.Database(action, err)
-			continue
-		}
-		events = append(events, e)
-	}
-	return events
-}
-
-func LinkEvent(talkID, eventID int) {
-	action := fmt.Sprintf("INSERT INTO TALK_EVENT talk_id:%d event_id:%d", talkID, eventID)
-
-	_, err := database.Forum.Exec(
-		"INSERT IGNORE INTO TALK_EVENT (talk_id, event_id) VALUES (?, ?)",
-		talkID, eventID,
-	)
-	if err != nil {
-		log.Database(action, err)
-	}
-}
-
-func UnlinkEvent(talkID, eventID int) {
-	action := fmt.Sprintf("DELETE FROM TALK_EVENT talk_id:%d event_id:%d", talkID, eventID)
-
-	_, err := database.Forum.Exec(
-		"DELETE FROM TALK_EVENT WHERE talk_id = ? AND event_id = ?",
-		talkID, eventID,
-	)
-	if err != nil {
-		log.Database(action, err)
-	}
-}
-
-func GetTalkProjects(talkID int) []ProjectSummary {
-	action := fmt.Sprintf("SELECT PROJECTS JOIN TALK_PROJECT WHERE talk_id : %d", talkID)
-
-	rows, err := database.Forum.Query(
-		"SELECT p.id, p.name FROM PROJECTS p JOIN TALK_PROJECT tp ON p.id = tp.project_id WHERE tp.talk_id = ?",
-		talkID,
-	)
-	if err != nil {
-		log.Database(action, err)
-		return []ProjectSummary{}
-	}
-	defer rows.Close()
-
-	projects := []ProjectSummary{}
-	for rows.Next() {
-		var p ProjectSummary
-		if err := rows.Scan(&p.Id, &p.Name); err != nil {
-			log.Database(action, err)
-			continue
-		}
-		projects = append(projects, p)
-	}
-	return projects
-}
-
-func LinkProject(talkID, projectID int) {
-	action := fmt.Sprintf("INSERT INTO TALK_PROJECT talk_id:%d project_id:%d", talkID, projectID)
-
-	_, err := database.Forum.Exec(
-		"INSERT IGNORE INTO TALK_PROJECT (talk_id, project_id) VALUES (?, ?)",
-		talkID, projectID,
-	)
-	if err != nil {
-		log.Database(action, err)
-	}
-}
-
-func UnlinkProject(talkID, projectID int) {
-	action := fmt.Sprintf("DELETE FROM TALK_PROJECT talk_id:%d project_id:%d", talkID, projectID)
-
-	_, err := database.Forum.Exec(
-		"DELETE FROM TALK_PROJECT WHERE talk_id = ? AND project_id = ?",
-		talkID, projectID,
 	)
 	if err != nil {
 		log.Database(action, err)

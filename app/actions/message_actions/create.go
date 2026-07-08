@@ -5,21 +5,15 @@ import (
 	"go-forum-backend/utils/rules"
 )
 
-type MessageDTO struct {
+type CreateMessageDTO struct {
 	Content  string `json:"content"`
 	FilePath string `json:"file_path"`
 }
 
-func validateCreate(dto MessageDTO) []rules.ValidationError {
+func CreateMessage(dto CreateMessageDTO) ([]rules.ValidationError, *message_models.Message) {
 	var errs []rules.ValidationError
 
 	rules.StringMinLength(dto.Content, 1, "content", &errs)
-
-	return errs
-}
-
-func CreateMessage(dto MessageDTO) ([]rules.ValidationError, *message_models.Message) {
-	errs := validateCreate(dto)
 	if len(errs) > 0 {
 		return errs, nil
 	}

@@ -6,29 +6,22 @@ import (
 )
 
 type UpdateTalkDTO struct {
-	Title  string `json:"title"`
-	Status string `json:"status"`
-}
-
-func validateUpdate(dto UpdateTalkDTO) []rules.ValidationError {
-	var errs []rules.ValidationError
-
-	rules.StringMinLength(dto.Title, 1, "title", &errs)
-	rules.StringMaxLength(dto.Title, 255, "title", &errs)
-	rules.StringMinLength(dto.Status, 1, "status", &errs)
-
-	return errs
+	Title   string `json:"title"`
+	Content string `json:"content"`
 }
 
 func UpdateTalk(id int, dto UpdateTalkDTO) ([]rules.ValidationError, *talk_models.Talk) {
-	errs := validateUpdate(dto)
+	var errs []rules.ValidationError
+
+	rules.StringMinLength(dto.Title, 1, "title", &errs)
+	rules.StringMinLength(dto.Content, 1, "content", &errs)
 	if len(errs) > 0 {
 		return errs, nil
 	}
 
 	talk := talk_models.UpdateTalk(id, talk_models.UpdateTalkDTO{
-		Title:  dto.Title,
-		Status: dto.Status,
+		Title:   dto.Title,
+		Content: dto.Content,
 	})
 
 	return nil, talk

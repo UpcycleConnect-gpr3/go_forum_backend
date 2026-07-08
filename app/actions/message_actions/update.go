@@ -6,25 +6,21 @@ import (
 )
 
 type UpdateMessageDTO struct {
-	Content string `json:"content"`
-}
-
-func validateUpdate(dto UpdateMessageDTO) []rules.ValidationError {
-	var errs []rules.ValidationError
-
-	rules.StringMinLength(dto.Content, 1, "content", &errs)
-
-	return errs
+	Content  string `json:"content"`
+	FilePath string `json:"file_path"`
 }
 
 func UpdateMessage(id int, dto UpdateMessageDTO) ([]rules.ValidationError, *message_models.Message) {
-	errs := validateUpdate(dto)
+	var errs []rules.ValidationError
+
+	rules.StringMinLength(dto.Content, 1, "content", &errs)
 	if len(errs) > 0 {
 		return errs, nil
 	}
 
 	message := message_models.UpdateMessage(id, message_models.UpdateMessageDTO{
-		Content: dto.Content,
+		Content:  dto.Content,
+		FilePath: dto.FilePath,
 	})
 
 	return nil, message

@@ -5,25 +5,18 @@ import (
 	"go-forum-backend/utils/rules"
 )
 
-type UpdateUserDTO struct {
+type UpdateUserActionDTO struct {
 	Username  string `json:"username"`
 	Firstname string `json:"firstname"`
 	Lastname  string `json:"lastname"`
 }
 
-func validateUpdate(dto UpdateUserDTO) []rules.ValidationError {
+func UpdateUser(id string, dto UpdateUserActionDTO) ([]rules.ValidationError, *user_models.User) {
 	var errs []rules.ValidationError
 
-	rules.StringMinLength(dto.Username, 3, "username", &errs)
-	rules.StringMaxLength(dto.Username, 50, "username", &errs)
-	rules.StringMinLength(dto.Firstname, 1, "firstname", &errs)
-	rules.StringMinLength(dto.Lastname, 1, "lastname", &errs)
-
-	return errs
-}
-
-func UpdateUser(id string, dto UpdateUserDTO) ([]rules.ValidationError, *user_models.User) {
-	errs := validateUpdate(dto)
+	if dto.Username != "" {
+		rules.StringMinLength(dto.Username, 3, "username", &errs)
+	}
 	if len(errs) > 0 {
 		return errs, nil
 	}

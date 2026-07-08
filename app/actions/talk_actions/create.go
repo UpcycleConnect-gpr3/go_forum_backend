@@ -5,35 +5,26 @@ import (
 	"go-forum-backend/utils/rules"
 )
 
-type TalkDTO struct {
-	Title       string `json:"title"`
-	Type        string `json:"type"`
-	Status      string `json:"status"`
-	Description string `json:"description"`
+type CreateTalkDTO struct {
+	Title      string `json:"title"`
+	Content    string `json:"content"`
+	CategoryID int    `json:"category_id"`
 }
 
-func validateCreate(dto TalkDTO) []rules.ValidationError {
+func CreateTalk(dto CreateTalkDTO) ([]rules.ValidationError, *talk_models.Talk) {
 	var errs []rules.ValidationError
 
 	rules.StringMinLength(dto.Title, 1, "title", &errs)
-	rules.StringMaxLength(dto.Title, 255, "title", &errs)
-	rules.StringMinLength(dto.Type, 1, "type", &errs)
-	rules.StringMinLength(dto.Status, 1, "status", &errs)
-
-	return errs
-}
-
-func CreateTalk(dto TalkDTO) ([]rules.ValidationError, *talk_models.Talk) {
-	errs := validateCreate(dto)
+	rules.StringMinLength(dto.Content, 1, "content", &errs)
+	rules.IntMinLength(dto.CategoryID, 1, "category_id", &errs)
 	if len(errs) > 0 {
 		return errs, nil
 	}
 
 	talk := talk_models.CreateTalk(talk_models.CreateTalkDTO{
-		Title:       dto.Title,
-		Type:        dto.Type,
-		Status:      dto.Status,
-		Description: dto.Description,
+		Title:      dto.Title,
+		Content:    dto.Content,
+		CategoryID: dto.CategoryID,
 	})
 
 	return nil, talk

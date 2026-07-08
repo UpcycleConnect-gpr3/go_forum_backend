@@ -24,7 +24,8 @@ type CreateMessageDTO struct {
 }
 
 type UpdateMessageDTO struct {
-	Content string
+	Content  string
+	FilePath string
 }
 
 type UserSummary struct {
@@ -61,7 +62,7 @@ func GetAllMessages(page, limit int) []Message {
 }
 
 func GetMessageByID(id int) *Message {
-	message := Message{}
+	m := Message{}
 	action := fmt.Sprintf("SELECT "+TABLE+" WHERE id : %d", id)
 
 	row := database.Forum.QueryRow(
@@ -69,7 +70,7 @@ func GetMessageByID(id int) *Message {
 		id,
 	)
 
-	err := row.Scan(&message.Id, &message.Content, &message.FilePath, &message.CreatedAt, &message.UpdatedAt)
+	err := row.Scan(&m.Id, &m.Content, &m.FilePath, &m.CreatedAt, &m.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil
@@ -78,7 +79,7 @@ func GetMessageByID(id int) *Message {
 		return nil
 	}
 
-	return &message
+	return &m
 }
 
 func CreateMessage(dto CreateMessageDTO) *Message {
@@ -86,7 +87,7 @@ func CreateMessage(dto CreateMessageDTO) *Message {
 
 	result, err := database.Forum.Exec(
 		"INSERT INTO "+TABLE+" (content, file_path) VALUES (?, ?)",
-		dto.Content, sql.NullString{String: dto.FilePath, Valid: dto.FilePath != ""},
+		dto.Content, dto.FilePath,
 	)
 	if err != nil {
 		log.Database(action, err)
@@ -106,8 +107,8 @@ func UpdateMessage(id int, dto UpdateMessageDTO) *Message {
 	action := fmt.Sprintf("UPDATE "+TABLE+" WHERE id : %d", id)
 
 	_, err := database.Forum.Exec(
-		"UPDATE "+TABLE+" SET content = ? WHERE id = ?",
-		dto.Content, id,
+		"UPDATE "+TABLE+" SET content = ?, file_path = ? WHERE id = ?",
+		dto.Content, dto.FilePath, id,
 	)
 	if err != nil {
 		log.Database(action, err)

@@ -194,9 +194,6 @@ type MessageSummary struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// EnsureUser cree la ligne USERS pour `id` si elle n'existe pas (INSERT
-// IGNORE) : les comptes viennent du backend auth (SSO), la base forum doit
-// les connaitre pour les jointures USER_TALK / USER_MESSAGE.
 func EnsureUser(id string, username string, firstname string, lastname string, email string) {
 	action := fmt.Sprintf("INSERT IGNORE INTO %s (provision): %s", TABLE, id)
 	_, err := database.Forum.Exec(

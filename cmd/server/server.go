@@ -32,7 +32,6 @@ func initialize() {
 		logger.Fatal().Err(err).Msg("Error loading .env file")
 	}
 
-	// Config Initialization
 	config.InitDatabase()
 
 	err = database.Forum.Ping()
@@ -53,22 +52,18 @@ func Start() {
 	logger := log.NewLoggerBuilder().WithLogLevel(zerolog.DebugLevel).WithBufferSize(10000).WithRateLimit(1000).WithGroupWindow(2 * time.Second).WithOutput(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).Build()
 	defer logger.Close()
 
-	// ── Route 1: Health ───────────────────────────────────────────────────────
 	http.HandleFunc("GET /health/{$}", limiterLow.RateLimit(containerApp(metric_handlers.Health)))
 
-	// ── Routes 2-3: Auth ──────────────────────────────────────────────────────
 	http.HandleFunc("POST /auth/login/{$}", limiterLow.RateLimit(containerApp(auth_handlers.LoginHandler)))
 	http.HandleFunc("POST /auth/register/{$}", limiterLow.RateLimit(containerApp(auth_handlers.RegisterHandler)))
 	http.HandleFunc("POST /auth/sso-login/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(auth_handlers.SSOLoginHandler))))
 
-	// ── Routes 4-8: Users ─────────────────────────────────────────────────────
 	http.HandleFunc("GET /users/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(user_handlers.GetUsersHandler))))
 	http.HandleFunc("GET /users/{id}/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(user_handlers.GetUserHandler))))
 	http.HandleFunc("PUT /users/{id}/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(user_handlers.UpdateUserHandler))))
 	http.HandleFunc("DELETE /users/{id}/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(user_handlers.DeleteUserHandler))))
 	http.HandleFunc("GET /users/{id}/messages/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(user_handlers.GetUserMessagesHandler))))
 
-	// ── Routes 9-14: Categories ───────────────────────────────────────────────
 	http.HandleFunc("GET /categories/{$}", limiterHigh.RateLimit(containerApp(category_handlers.GetCategoriesHandler)))
 	http.HandleFunc("GET /categories/{id}/{$}", limiterHigh.RateLimit(containerApp(category_handlers.GetCategoryHandler)))
 	http.HandleFunc("POST /categories/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(category_handlers.CreateCategoryHandler))))
@@ -76,7 +71,6 @@ func Start() {
 	http.HandleFunc("DELETE /categories/{id}/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(category_handlers.DeleteCategoryHandler))))
 	http.HandleFunc("GET /categories/{id}/talks/{$}", limiterHigh.RateLimit(containerApp(category_handlers.GetCategoryTalksHandler)))
 
-	// ── Routes 15-25: Talks ───────────────────────────────────────────────────
 	http.HandleFunc("GET /talks/{$}", limiterHigh.RateLimit(containerApp(talk_handlers.GetTalksHandler)))
 	http.HandleFunc("GET /talks/{id}/{$}", limiterHigh.RateLimit(containerApp(talk_handlers.GetTalkHandler)))
 	http.HandleFunc("POST /talks/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(talk_handlers.CreateTalkHandler))))
@@ -89,7 +83,6 @@ func Start() {
 	http.HandleFunc("POST /talks/{id}/users/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(talk_handlers.LinkTalkUserHandler))))
 	http.HandleFunc("DELETE /talks/{id}/users/{user_id}/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(talk_handlers.UnlinkTalkUserHandler))))
 
-	// ── Routes 26-33: Messages ────────────────────────────────────────────────
 	http.HandleFunc("GET /messages/{$}", limiterHigh.RateLimit(containerApp(message_handlers.GetMessagesHandler)))
 	http.HandleFunc("GET /messages/{id}/{$}", limiterHigh.RateLimit(containerApp(message_handlers.GetMessageHandler)))
 	http.HandleFunc("POST /messages/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(message_handlers.CreateMessageHandler))))
@@ -99,7 +92,6 @@ func Start() {
 	http.HandleFunc("POST /messages/{id}/users/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(message_handlers.LinkMessageUserHandler))))
 	http.HandleFunc("DELETE /messages/{id}/users/{user_id}/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(message_handlers.UnlinkMessageUserHandler))))
 
-	// ── Routes 34-41: Events ──────────────────────────────────────────────────
 	http.HandleFunc("GET /events/{$}", limiterHigh.RateLimit(containerApp(event_handlers.GetEventsHandler)))
 	http.HandleFunc("GET /events/{id}/{$}", limiterHigh.RateLimit(containerApp(event_handlers.GetEventHandler)))
 	http.HandleFunc("POST /events/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(event_handlers.CreateEventHandler))))
@@ -111,7 +103,6 @@ func Start() {
 	http.HandleFunc("POST /events/{id}/users/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(event_handlers.LinkEventUserHandler))))
 	http.HandleFunc("DELETE /events/{id}/users/{user_id}/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(event_handlers.UnlinkEventUserHandler))))
 
-	// ── Routes 42-46: Projects ────────────────────────────────────────────────
 	http.HandleFunc("GET /projects/{$}", limiterHigh.RateLimit(containerApp(project_handlers.GetProjectsHandler)))
 	http.HandleFunc("GET /projects/{id}/{$}", limiterHigh.RateLimit(containerApp(project_handlers.GetProjectHandler)))
 	http.HandleFunc("POST /projects/{$}", limiterMedium.RateLimit(containerApp(auth_middleware.IsAuth(project_handlers.CreateProjectHandler))))
@@ -125,9 +116,6 @@ func Start() {
 	}
 }
 
-// corsMiddleware enables cross-origin requests from the local dev frontends
-// (Vite on a different port). Reflects the request Origin and answers the
-// preflight OPTIONS so browser calls are not blocked.
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if origin := r.Header.Get("Origin"); origin != "" {

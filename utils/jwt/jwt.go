@@ -72,7 +72,6 @@ func GenerateJWT(userId string) (string, error) {
 	return token.SignedString(privateKey)
 }
 
-// RoleFromToken renvoie le claim "role" du token (chaine vide si absent/invalide).
 func RoleFromToken(tokenString string) string {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {

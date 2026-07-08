@@ -17,9 +17,6 @@ type SSOLoginDTO struct {
 	Email     string `json:"email"`
 }
 
-// SSOLoginHandler provisionne l'utilisateur du token (emis par
-// go_auth_backend, meme cle publique) dans la base forum : necessaire aux
-// jointures USER_TALK / USER_MESSAGE des discussions. Idempotent.
 func SSOLoginHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 	userId := auth_middleware.GetUserId(r.Context())

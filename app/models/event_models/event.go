@@ -89,7 +89,6 @@ func GetEventByID(id int) *Event {
 	return &event
 }
 
-// SetStatus met a jour le statut de validation d'un evenement.
 func SetStatus(id int, status string) error {
 	_, err := database.Forum.Exec(
 		"UPDATE "+TABLE+" SET status = ?, updated_at = NOW() WHERE id = ?",

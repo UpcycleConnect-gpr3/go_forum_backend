@@ -34,12 +34,10 @@ func setEventStatus(w http.ResponseWriter, r *http.Request, status string) {
 	response.NewSuccessData(w, map[string]any{"id": id, "status": status}, "")
 }
 
-// ValidateEventHandler — POST /events/{id}/validate (administrator)
 func ValidateEventHandler(w http.ResponseWriter, r *http.Request) {
 	setEventStatus(w, r, "validated")
 }
 
-// RejectEventHandler — POST /events/{id}/reject (administrator)
 func RejectEventHandler(w http.ResponseWriter, r *http.Request) {
 	setEventStatus(w, r, "rejected")
 }

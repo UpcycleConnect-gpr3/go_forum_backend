@@ -1,8 +1,7 @@
 package auth_handlers
 
 import (
-	"encoding/json"
-	"go-forum-backend/app/actions/auth_actions"
+	"go-forum-backend/app/actions/user_actions"
 	"go-forum-backend/app/models/user_models"
 	"go-forum-backend/utils/jwt"
 	"go-forum-backend/utils/log"
@@ -10,49 +9,38 @@ import (
 	"net/http"
 )
 
+// LoginHandler provisions the local forum user from a token issued by the
+// central auth service. It never generates a token itself: it verifies the
+// bearer token, then returns the matching user, creating it on first login.
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	log.Api(r)
 
-	var credentials user_models.Credentials
-	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
-		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
+	tokenString := r.Header.Get("Authorization")
+	if tokenString == "" {
+		response.NewErrorMessage(w, response.ErrAuthTokenRequired, http.StatusUnauthorized)
 		return
 	}
 
-	validationErrors, user := auth_actions.Login(credentials)
-	if len(validationErrors) > 0 {
-		response.NewValidationError(w, response.ErrInvalidBody, validationErrors)
-		return
-	}
-
-	token, err := jwt.GenerateJWT(user.Id.String())
+	userId, err := jwt.VerifyJWT(tokenString)
 	if err != nil {
-		response.NewErrorMessage(w, response.ErrGenerateToken, http.StatusInternalServerError)
+		response.NewErrorMessage(w, response.ErrInvalidAuthToken, http.StatusUnauthorized)
 		return
 	}
 
-	response.NewSuccessData(w, map[string]string{"bearer_token": token}, "")
-}
-
-func RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	log.Api(r)
-
-	var dto auth_actions.RegisterDTO
-	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
-		response.NewErrorMessage(w, response.ErrJson, http.StatusBadRequest)
+	if existing := user_models.GetUserByID(userId); existing != nil {
+		response.NewSuccessData(w, existing, "")
 		return
 	}
 
-	validationErrors, user := auth_actions.Register(dto)
+	validationErrors, newUser := user_actions.CreateUserFromToken(userId)
 	if len(validationErrors) > 0 {
 		response.NewValidationError(w, response.ErrInvalidBody, validationErrors)
 		return
 	}
+	if newUser == nil {
+		response.NewErrorMessage(w, "Could not provision user", http.StatusInternalServerError)
+		return
+	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"data":    user,
-	})
+	response.NewSuccessData(w, newUser, "")
 }

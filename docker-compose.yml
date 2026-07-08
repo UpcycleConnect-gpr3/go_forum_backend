@@ -6,7 +6,6 @@ services:
     container_name: app_forum
     volumes:
       - ./.env:/app/.env
-      - ./private_key.pem:/app/private_key.pem
       - ./public_key.pem:/app/public_key.pem
     depends_on:
       mariadb_forum:

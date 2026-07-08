@@ -9,42 +9,20 @@ import (
 	"go-forum-backend/utils/response"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 var (
-	privateKey *rsa.PrivateKey
-	publicKey  *rsa.PublicKey
+	publicKey *rsa.PublicKey
 )
 
 func init() {
-	privateKeyPEM, err := os.ReadFile("private_key.pem")
-	if err != nil {
-		log.Fatal(err)
-	}
-	block, _ := pem.Decode(privateKeyPEM)
-	if block == nil {
-		log.Info("Failed to decode PEM block containing the private key")
-	}
-
-	privateKeyAny, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var ok bool
-	privateKey, ok = privateKeyAny.(*rsa.PrivateKey)
-	if !ok {
-		log.Info("Private key is not an RSA key")
-	}
-
 	publicKeyPEM, err := os.ReadFile("public_key.pem")
 	if err != nil {
 		log.Fatal(err)
 	}
-	block, _ = pem.Decode(publicKeyPEM)
+	block, _ := pem.Decode(publicKeyPEM)
 	if block == nil {
 		log.Info("Failed to decode PEM block containing the public key")
 	}
@@ -54,22 +32,11 @@ func init() {
 		log.Fatal(err)
 	}
 
+	var ok bool
 	publicKey, ok = publicKeyInterface.(*rsa.PublicKey)
 	if !ok {
 		log.Info("Public key is not an RSA key")
 	}
-}
-
-func GenerateJWT(userId string) (string, error) {
-
-	claims := jwt.MapClaims{
-		"userId": userId,
-		"exp":    time.Now().Add(time.Hour).Unix(),
-		"iat":    time.Now().Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	return token.SignedString(privateKey)
 }
 
 func RoleFromToken(tokenString string) string {

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const TABLE = "USERS"
@@ -18,35 +17,23 @@ type User struct {
 	Username  string    `json:"username"`
 	Firstname string    `json:"firstname"`
 	Lastname  string    `json:"lastname"`
-	password  string    `db:"password" json:"-"`
 	Email     string    `json:"email"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
-type Credentials struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+type CreateUserDTO struct {
+	Id        string
+	Username  string
+	Firstname string
+	Lastname  string
+	Email     string
 }
 
 type UpdateUserDTO struct {
 	Username  string
 	Firstname string
 	Lastname  string
-}
-
-func (u *User) SetPassword(password string) error {
-	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	u.password = string(hashed)
-	return nil
-}
-
-func (u *User) CheckPassword(password string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(u.password), []byte(password))
-	return err == nil
 }
 
 func GetAllUsers(page, limit int) []User {
@@ -96,47 +83,19 @@ func GetUserByID(id string) *User {
 	return &user
 }
 
-func GetUserByEmail(email string) *User {
-	user := User{}
-	action := fmt.Sprintf("SELECT "+TABLE+" WHERE email : %s", email)
+func (u *User) Create(dto CreateUserDTO) error {
+	action := fmt.Sprintf("INSERT INTO "+TABLE+" : %s", dto.Id)
 
-	row := database.Forum.QueryRow(
-		"SELECT id, email, password FROM "+TABLE+" WHERE email = ?",
-		email,
-	)
-
-	err := row.Scan(&user.Id, &user.Email, &user.password)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil
-		}
-		log.Database(action, err)
-		return nil
-	}
-
-	return &user
-}
-
-func CreateUser(credentials Credentials) *User {
-	action := fmt.Sprintf("INSERT INTO "+TABLE+" : %s", credentials.Email)
-
-	u := User{}
-	if err := u.SetPassword(credentials.Password); err != nil {
-		log.Database(action, err)
-		return nil
-	}
-
-	id := uuid.New()
 	_, err := database.Forum.Exec(
-		"INSERT INTO "+TABLE+" (id, email, password) VALUES (?, ?, ?)",
-		id.String(), credentials.Email, u.password,
+		"INSERT INTO "+TABLE+" (id, username, firstname, lastname, email) VALUES (?, ?, ?, ?, ?)",
+		dto.Id, dto.Username, dto.Firstname, dto.Lastname, dto.Email,
 	)
 	if err != nil {
 		log.Database(action, err)
-		return nil
+		return err
 	}
 
-	return GetUserByID(id.String())
+	return nil
 }
 
 func UpdateUser(id string, dto UpdateUserDTO) *User {
@@ -192,15 +151,4 @@ type MessageSummary struct {
 	Id        int       `json:"id"`
 	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"created_at"`
-}
-
-func EnsureUser(id string, username string, firstname string, lastname string, email string) {
-	action := fmt.Sprintf("INSERT IGNORE INTO %s (provision): %s", TABLE, id)
-	_, err := database.Forum.Exec(
-		"INSERT IGNORE INTO "+TABLE+" (id, username, firstname, lastname, email, password) VALUES (?, ?, ?, ?, ?, '')",
-		id, username, firstname, lastname, email,
-	)
-	if err != nil {
-		log.Database(action, err)
-	}
 }

@@ -6,7 +6,6 @@ services:
       target: dev
     volumes:
       - .env:/app/.env
-      - ./private_key.pem:/app/private_key.pem
       - ./public_key.pem:/app/public_key.pem
     ports:
       - "${APP_PORT}:${APP_PORT}"
@@ -26,7 +25,7 @@ services:
       MARIADB_PASSWORD: "${DATABASE_PASSWORD}"
       MARIADB_DATABASE: "${DATABASE_NAME}"
     ports:
-      - "${DATABASE_PORT}:3306"
+      - "3307:3306"
     volumes:
       - mariadb_forum_data:/var/lib/mysql
     networks:
